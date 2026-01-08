@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DfT Travel Carbon QuickCalc</title>
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="description" content="Estimate travel emissions (kgCO₂e) using UK Government conversion factors (2025)." />
+</head>
+
+<body>
+  <header class="container">
+    <h1>DfT Travel Carbon QuickCalc</h1>
+    <p class="subtitle">
+      Quick travel emissions estimates (kgCO₂e) for common business travel modes.
+      (Coursework MVP — not an official DfT tool.)
+    </p>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <h2>Calculator</h2>
+
+      <form id="trip-form" class="form" novalidate>
+        <div class="grid-2">
+          <div class="field">
+            <label for="mode">Trip type</label>
+            <select id="mode" name="mode">
+              <option value="land" selected>Land (car / taxi / bus / rail)</option>
+              <option value="air">Flight</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="passengers">Passengers</label>
+            <input id="passengers" name="passengers" type="number" min="1" step="1" value="1" />
+            <div class="help">
+              Car factors are per vehicle-km; bus/rail/air are per passenger-km.
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="distance">Distance</label>
+            <input id="distance" name="distance" inputmode="decimal" type="number"
+                   min="0.01" step="0.01" placeholder="e.g., 120" required />
+          </div>
+
+          <div class="field">
+            <label for="unit">Unit</label>
+            <select id="unit" name="unit">
+              <option value="km" selected>Kilometres (km)</option>
+              <option value="miles">Miles</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="land-options" class="subpanel">
+          <div class="grid-2">
+            <div class="field">
+              <label for="landMode">Land mode</label>
+              <select id="landMode" name="landMode">
+                <option value="car" selected>Car</option>
+                <option value="taxi">Taxi</option>
+                <option value="bus">Bus / Coach</option>
+                <option value="rail">Rail / Underground</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Option</label>
+              <div class="stack">
+                <select id="carType" name="carType"></select>
+                <select id="taxiType" name="taxiType" hidden></select>
+                <select id="busType" name="busType" hidden></select>
+                <select id="railType" name="railType" hidden></select>
+              </div>
+              <div class="help">
+                For car, per-passenger is estimated by dividing by passenger count.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="air-options" class="subpanel" hidden>
+          <div class="grid-2">
+            <div class="field">
+              <label for="haul">Haul</label>
+              <select id="haul" name="haul">
+                <option value="domestic_to_from_uk" selected>Domestic (to/from UK)</option>
+                <option value="short_haul_to_from_uk">Short-haul (to/from UK)</option>
+                <option value="long_haul_to_from_uk">Long-haul (to/from UK)</option>
+                <option value="international_non_uk">International (to/from non-UK)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="flightClass">Class</label>
+              <select id="flightClass" name="flightClass"></select>
+              <div class="help">Flights show results both “With RF” and “Without RF”.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" type="submit">Calculate</button>
+          <button class="btn btn-secondary" type="button" id="addToCompare" disabled>Add to comparison</button>
+        </div>
+      </form>
+
+      <div id="error" class="alert" role="alert" hidden></div>
+
+      <section id="result" class="result" hidden>
+        <div id="resultInner"></div>
+      </section>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Comparison</h2>
+        <button class="btn btn-ghost" type="button" id="clearCompare">Clear</button>
+      </div>
+
+      <p class="muted">
+        Add multiple trips. For flights, the comparison table uses the “With RF” total.
+      </p>
+
+      <div class="table-wrap">
+        <table class="table" aria-label="Trip comparison table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Trip</th>
+              <th>Emissions</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="compareTableBody">
+            <tr><td colspan="4" class="muted">No trips added yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Data transparency</h2>
+      <p>
+        Factors are from the UK Government GHG Conversion Factors (2025 condensed set).
+        This MVP uses a small subset for business travel modes.
+      </p>
+      <details>
+        <summary>Show metadata</summary>
+        <pre id="metaBox" class="code"></pre>
+      </details>
+      <p class="muted small">
+        Disclaimer: Estimates are for comparison and early-stage analysis only.
+      </p>
+    </section>
+  </main>
+
+  <footer class="container footer">
+    <p class="muted small">Built for NCHNAP688 Software Engineering AE1.</p>
+  </footer>
+
+  <script src="src/factors.js"></script>
+  <script src="src/calc.js"></script>
+  <script src="script.js"></script>
+
+  <script>
+    // metadata box
+    try {
+      document.getElementById("metaBox").textContent =
+        JSON.stringify(window.CarbonFactors?.meta ?? {}, null, 2);
+    } catch (e) {}
+
+    // toggle the correct option dropdown for land mode
+    (function () {
+      const landMode = document.getElementById("landMode");
+      const car = document.getElementById("carType");
+      const taxi = document.getElementById("taxiType");
+      const bus = document.getElementById("busType");
+      const rail = document.getElementById("railType");
+
+      function update() {
+        const v = landMode.value;
+        car.hidden = v !== "car";
+        taxi.hidden = v !== "taxi";
+        bus.hidden = v !== "bus";
+        rail.hidden = v !== "rail";
+      }
+
+      landMode.addEventListener("change", update);
+      update();
+    })();
+  </script>
+</body>
+</html>
