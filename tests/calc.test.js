@@ -25,7 +25,7 @@ describe("unit conversion", () => {
 });
 
 describe("land calculations", () => {
-  test("car diesel: 100 km, 1 passenger (vehicle total)", () => {
+  test("car diesel: 100 km, 1 passenger", () => {
     const out = CarbonCalc.calculate(
       { mode: "land", unit: "km", distance: 100, passengers: 1, landMode: "car", option: "diesel" },
       CarbonFactors
@@ -35,14 +35,12 @@ describe("land calculations", () => {
     expect(out.factorUnit).toBe("vehicle.km");
   });
 
-  test("rail national: 100 km, 2 passengers (passenger.km total)", () => {
+  test("rail national: 100 km, 2 passengers", () => {
     const out = CarbonCalc.calculate(
       { mode: "land", unit: "km", distance: 100, passengers: 2, landMode: "rail", option: "national_rail" },
       CarbonFactors
     );
-    // per passenger = 100 * 0.03546 = 3.546 -> 3.55
     expect(out.perPassengerKg).toBeCloseTo(3.55, 2);
-    // group total ~ 7.09
     expect(out.totalKg).toBeCloseTo(7.09, 2);
     expect(out.factorUnit).toBe("passenger.km");
   });
