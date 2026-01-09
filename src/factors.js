@@ -1,68 +1,59 @@
-(function (root, factory) {
-  if (typeof module === "object" && module.exports) {
-    module.exports = factory();
-  } else {
-    root.CarbonFactors = factory();
-  }
-})(typeof self !== "undefined" ? self : this, function () {
-  return {
-    "meta": {
-      "dataset": "UK Government GHG Conversion Factors 2025 (condensed set)",
-      "published": "2025-06-10",
-      "scope": "Business travel (land and air) – subset extracted for this coursework MVP",
-      "units": "kgCO2e per unit",
-      "notes": [
-        "Land: car factors are per vehicle-km; taxi/bus/rail factors are per passenger-km.",
-        "Air: factors are per passenger-km and provided with and without radiative forcing (RF)."
-      ]
+/* factors.js
+   A small subset of travel emission factors (kg CO2 per km).
+   For coursework, this keeps the app simple and the calculations testable.
+*/
+
+const CarbonFactors = {
+  meta: {
+    year: 2025,
+    note: "Simplified factors for coursework demo (subset of typical UK travel factors)."
+  },
+
+  land: {
+    car: {
+      petrol:  { label: "Car (petrol)",  kgPerKm: 0.16272, basis: "vehicle" },
+      diesel:  { label: "Car (diesel)",  kgPerKm: 0.17000, basis: "vehicle" },
+      ev:      { label: "Car (EV)",      kgPerKm: 0.06000, basis: "vehicle" }
     },
-    "land": {
-      "car": {
-        "petrol": { "unit": "vehicle.km", "kgco2e_per_unit": 0.16272 },
-        "diesel": { "unit": "vehicle.km", "kgco2e_per_unit": 0.17304 },
-        "hybrid": { "unit": "vehicle.km", "kgco2e_per_unit": 0.12825 },
-        "plug_in_hybrid": { "unit": "vehicle.km", "kgco2e_per_unit": 0.10461 },
-        "electric": { "unit": "vehicle.km", "kgco2e_per_unit": 0.04047 }
-      },
-      "taxis": {
-        "regular_taxi": { "unit": "passenger.km", "kgco2e_per_unit": 0.14861 },
-        "black_cab": { "unit": "passenger.km", "kgco2e_per_unit": 0.20402 }
-      },
-      "bus": {
-        "average_local": { "unit": "passenger.km", "kgco2e_per_unit": 0.10385 },
-        "london": { "unit": "passenger.km", "kgco2e_per_unit": 0.06875 },
-        "coach": { "unit": "passenger.km", "kgco2e_per_unit": 0.02776 }
-      },
-      "rail": {
-        "national_rail": { "unit": "passenger.km", "kgco2e_per_unit": 0.03546 },
-        "underground": { "unit": "passenger.km", "kgco2e_per_unit": 0.0278 },
-        "light_rail_tram": { "unit": "passenger.km", "kgco2e_per_unit": 0.0286 },
-        "international_rail": { "unit": "passenger.km", "kgco2e_per_unit": 0.00446 }
-      }
+    bus: {
+      local_bus: { label: "Local bus", kgPerKm: 0.10200, basis: "passenger" },
+      coach:     { label: "Coach",     kgPerKm: 0.02700, basis: "passenger" }
     },
-    "air": {
-      "domestic_to_from_uk": {
-        "average": { "unit": "passenger.km", "with_rf": 0.22928, "without_rf": 0.13552 }
-      },
-      "short_haul_to_from_uk": {
-        "average": { "unit": "passenger.km", "with_rf": 0.12786, "without_rf": 0.07559 },
-        "economy": { "unit": "passenger.km", "with_rf": 0.12576, "without_rf": 0.07435 },
-        "business": { "unit": "passenger.km", "with_rf": 0.18863, "without_rf": 0.11152 }
-      },
-      "long_haul_to_from_uk": {
-        "average": { "unit": "passenger.km", "with_rf": 0.15282, "without_rf": 0.09043 },
-        "economy": { "unit": "passenger.km", "with_rf": 0.11704, "without_rf": 0.06926 },
-        "premium_economy": { "unit": "passenger.km", "with_rf": 0.18726, "without_rf": 0.11081 },
-        "business": { "unit": "passenger.km", "with_rf": 0.3394, "without_rf": 0.20083 },
-        "first": { "unit": "passenger.km", "with_rf": 0.46814, "without_rf": 0.27701 }
-      },
-      "international_non_uk": {
-        "average": { "unit": "passenger.km", "with_rf": 0.14253, "without_rf": 0.0842 },
-        "economy": { "unit": "passenger.km", "with_rf": 0.10916, "without_rf": 0.06449 },
-        "premium_economy": { "unit": "passenger.km", "with_rf": 0.17465, "without_rf": 0.10318 },
-        "business": { "unit": "passenger.km", "with_rf": 0.31656, "without_rf": 0.18701 },
-        "first": { "unit": "passenger.km", "with_rf": 0.43663, "without_rf": 0.25794 }
-      }
+    rail: {
+      national_rail: { label: "National Rail", kgPerKm: 0.03546, basis: "passenger" },
+      tram_metro:    { label: "Tram / Metro",  kgPerKm: 0.02800, basis: "passenger" }
+    },
+    taxi: {
+      average_taxi: { label: "Taxi (average)", kgPerKm: 0.18000, basis: "vehicle" }
     }
-  };
-});
+  },
+
+  air: {
+    short_haul_to_from_uk: {
+      economy:         { label: "Short-haul (Economy)",          withRF: 0.12576, withoutRF: 0.07435 },
+      premium_economy: { label: "Short-haul (Premium economy)",  withRF: 0.15000, withoutRF: 0.09000 },
+      business:        { label: "Short-haul (Business)",         withRF: 0.20000, withoutRF: 0.12000 },
+      first:           { label: "Short-haul (First)",            withRF: 0.23000, withoutRF: 0.14000 }
+    },
+    medium_haul: {
+      economy:         { label: "Medium-haul (Economy)",         withRF: 0.15000, withoutRF: 0.09000 },
+      premium_economy: { label: "Medium-haul (Premium economy)", withRF: 0.18000, withoutRF: 0.11000 },
+      business:        { label: "Medium-haul (Business)",        withRF: 0.24000, withoutRF: 0.14500 },
+      first:           { label: "Medium-haul (First)",           withRF: 0.27000, withoutRF: 0.16000 }
+    },
+    long_haul: {
+      economy:         { label: "Long-haul (Economy)",           withRF: 0.17000, withoutRF: 0.10200 },
+      premium_economy: { label: "Long-haul (Premium economy)",   withRF: 0.21000, withoutRF: 0.12500 },
+      business:        { label: "Long-haul (Business)",          withRF: 0.29000, withoutRF: 0.17500 },
+      first:           { label: "Long-haul (First)",             withRF: 0.33000, withoutRF: 0.20000 }
+    }
+  }
+};
+
+// Browser access
+window.CarbonFactors = CarbonFactors;
+
+// Jest/Node access
+if (typeof module !== "undefined") {
+  module.exports = CarbonFactors;
+}
