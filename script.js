@@ -1,342 +1,291 @@
-/* global CarbonCalc, CarbonFactors */
-(function () {
-  "use strict";
+// script.js
+// UI wiring: read inputs, validate, call calc.js, render results + comparison table.
 
-  const $ = (id) => document.getElementById(id);
+document.addEventListener("DOMContentLoaded", function () {
+  const modeEl = document.getElementById("mode");
+  const distanceEl = document.getElementById("distance");
+  const unitEl = document.getElementById("unit");
+  const passengersEl = document.getElementById("passengers");
 
-  const form = $("trip-form");
-  const errorBox = $("error");
-  const result = $("result");
-  const resultInner = $("resultInner");
+  const landControls = document.getElementById("landControls");
+  const airControls = document.getElementById("airControls");
 
-  const mode = $("mode");
-  const passengers = $("passengers");
-  const distance = $("distance");
-  const unit = $("unit");
+  const landModeEl = document.getElementById("landMode");
+  const carOptionEl = document.getElementById("carOption");
+  const busOptionEl = document.getElementById("busOption");
+  const railOptionEl = document.getElementById("railOption");
+  const taxiOptionEl = document.getElementById("taxiOption");
 
-  const landOptions = $("land-options");
-  const airOptions = $("air-options");
+  const carWrap = document.getElementById("carOptionsWrap");
+  const busWrap = document.getElementById("busOptionsWrap");
+  const railWrap = document.getElementById("railOptionsWrap");
+  const taxiWrap = document.getElementById("taxiOptionsWrap");
 
-  const landMode = $("landMode");
-  const carType = $("carType");
-  const taxiType = $("taxiType");
-  const busType = $("busType");
-  const railType = $("railType");
+  const haulEl = document.getElementById("haul");
+  const flightClassEl = document.getElementById("flightClass");
 
-  const haul = $("haul");
-  const flightClass = $("flightClass");
+  const form = document.getElementById("calcForm");
+  const clearBtn = document.getElementById("clearBtn");
 
-  const addToCompareBtn = $("addToCompare");
-  const clearCompareBtn = $("clearCompare");
-  const compareTableBody = $("compareTableBody");
-
-  const factors = window.CarbonFactors;
-
-  const state = {
-    lastCalc: null,
-    compare: [],
-  };
-
-  const LABELS = {
-    car: {
-      petrol: "Petrol",
-      diesel: "Diesel",
-      hybrid: "Hybrid",
-      plug_in_hybrid: "Plug-in hybrid",
-      electric: "Electric",
-    },
-    taxi: {
-      regular_taxi: "Regular taxi",
-      black_cab: "Black cab",
-    },
-    bus: {
-      average_local: "Average local bus",
-      london: "Local London bus",
-      coach: "Coach",
-    },
-    rail: {
-      national_rail: "National Rail",
-      underground: "London Underground",
-      light_rail_tram: "Light rail / tram",
-      international_rail: "International rail",
-    },
-    haul: {
-      domestic_to_from_uk: "Domestic (to/from UK)",
-      short_haul_to_from_uk: "Short-haul (to/from UK)",
-      long_haul_to_from_uk: "Long-haul (to/from UK)",
-      international_non_uk: "International (to/from non-UK)",
-    },
-    flightClass: {
-      average: "Average passenger",
-      economy: "Economy",
-      premium_economy: "Premium economy",
-      business: "Business",
-      first: "First",
-    },
-  };
-
-  const UNIT_LABELS = {
-    "vehicle.km": "vehicle-km",
-    "passenger.km": "passenger-km",
-  };
+  const errorEl = document.getElementById("error");
+  const resultsEl = document.getElementById("results");
+  const comparisonBody = document.getElementById("comparisonBody");
+  const factorNote = document.getElementById("factorNote");
 
   function setError(msg) {
-    errorBox.textContent = msg || "";
-    errorBox.hidden = !msg;
+    errorEl.textContent = msg || "";
   }
 
-  function showResult(html) {
-    resultInner.innerHTML = html;
-    result.hidden = false;
+  function showLandModeOptions() {
+    const landMode = landModeEl.value;
+
+    carWrap.classList.add("hidden");
+    busWrap.classList.add("hidden");
+    railWrap.classList.add("hidden");
+    taxiWrap.classList.add("hidden");
+
+    if (landMode === "car") carWrap.classList.remove("hidden");
+    if (landMode === "bus") busWrap.classList.remove("hidden");
+    if (landMode === "rail") railWrap.classList.remove("hidden");
+    if (landMode === "taxi") taxiWrap.classList.remove("hidden");
   }
 
-  function hideResult() {
-    result.hidden = true;
-    resultInner.innerHTML = "";
-  }
-
-  function toggleModePanels() {
-    const isLand = mode.value === "land";
-    landOptions.hidden = !isLand;
-    airOptions.hidden = isLand;
-  }
-
-  function fillSelect(selectEl, optionsObj, labelsObj) {
-    selectEl.innerHTML = "";
-    Object.keys(optionsObj).forEach((k) => {
-      const opt = document.createElement("option");
-      opt.value = k;
-      opt.textContent = labelsObj[k] || k;
-      selectEl.appendChild(opt);
-    });
-  }
-
-  function populateLandSelects() {
-    fillSelect(carType, factors.land.car, LABELS.car);
-    fillSelect(taxiType, factors.land.taxis, LABELS.taxi);
-    fillSelect(busType, factors.land.bus, LABELS.bus);
-    fillSelect(railType, factors.land.rail, LABELS.rail);
-  }
-
-  function populateFlightClasses() {
-    const rec = factors.air[haul.value];
-    const keys = Object.keys(rec);
-
-    flightClass.innerHTML = "";
-    keys.forEach((k) => {
-      const opt = document.createElement("option");
-      opt.value = k;
-      opt.textContent = LABELS.flightClass[k] || k;
-      flightClass.appendChild(opt);
-    });
-
-    if (keys.includes("economy")) flightClass.value = "economy";
-    else flightClass.value = keys[0];
-  }
-
-  function currentSelection() {
-    if (mode.value === "land") {
-      const lm = landMode.value;
-      if (lm === "car") return { mode: "land", landMode: "car", option: carType.value };
-      if (lm === "taxi") return { mode: "land", landMode: "taxi", option: taxiType.value };
-      if (lm === "bus") return { mode: "land", landMode: "bus", option: busType.value };
-      if (lm === "rail") return { mode: "land", landMode: "rail", option: railType.value };
+  function showModeControls() {
+    if (modeEl.value === "air") {
+      landControls.classList.add("hidden");
+      airControls.classList.remove("hidden");
+    } else {
+      airControls.classList.add("hidden");
+      landControls.classList.remove("hidden");
     }
-
-    return { mode: "air", haul: haul.value, flightClass: flightClass.value };
   }
 
-  function getInputs() {
-    const dist = Number(distance.value);
-    const pax = Number(passengers.value);
+  function currentLandOption() {
+    const landMode = landModeEl.value;
+    if (landMode === "car") return { landMode, option: carOptionEl.value };
+    if (landMode === "bus") return { landMode, option: busOptionEl.value };
+    if (landMode === "rail") return { landMode, option: railOptionEl.value };
+    return { landMode, option: taxiOptionEl.value };
+  }
 
-    const distCheck = CarbonCalc.validateDistance(dist);
-    if (!distCheck.ok) return { ok: false, message: distCheck.message };
+  function buildInputs() {
+    const dist = CarbonCalc.parsePositiveNumber(distanceEl.value.trim(), "distance");
+    if (dist.error) return { ok: false, error: dist.error };
 
-    const paxCheck = CarbonCalc.validatePassengers(pax);
-    if (!paxCheck.ok) return { ok: false, message: paxCheck.message };
+    const pax = CarbonCalc.parsePassengers(passengersEl.value.trim());
+    if (pax.error) return { ok: false, error: pax.error };
 
-    const sel = currentSelection();
+    const base = {
+      mode: modeEl.value,
+      distance: dist.value,
+      unit: unitEl.value,
+      passengers: pax.value
+    };
 
-    if (sel.mode === "land") {
+    if (base.mode === "air") {
       return {
         ok: true,
-        input: {
-          mode: "land",
-          unit: unit.value,
-          distance: dist,
-          passengers: pax,
-          landMode: sel.landMode,
-          option: sel.option,
-        },
+        inputs: {
+          ...base,
+          haul: haulEl.value,
+          flightClass: flightClassEl.value
+        }
       };
     }
 
+    const land = currentLandOption();
     return {
       ok: true,
-      input: {
-        mode: "air",
-        unit: unit.value,
-        distance: dist,
-        passengers: pax,
-        haul: sel.haul,
-        flightClass: sel.flightClass,
-      },
+      inputs: {
+        ...base,
+        landMode: land.landMode,
+        option: land.option
+      }
     };
   }
 
-  function makeTripLabel(input, out) {
-    const p = Number(input.passengers);
-    const distLabel = `${CarbonCalc.format(out.distanceKm)} km`;
-
-    if (input.mode === "land") {
-      const lm = input.landMode;
-      if (lm === "car") return `Land • Car (${LABELS.car[input.option]}) • ${distLabel} • ${p} passenger(s)`;
-      if (lm === "taxi") return `Land • Taxi (${LABELS.taxi[input.option]}) • ${distLabel} • ${p} passenger(s)`;
-      if (lm === "bus") return `Land • Bus (${LABELS.bus[input.option]}) • ${distLabel} • ${p} passenger(s)`;
-      if (lm === "rail") return `Land • Rail (${LABELS.rail[input.option]}) • ${distLabel} • ${p} passenger(s)`;
-      return `Land • ${distLabel}`;
-    }
-
-    return `Air • ${LABELS.haul[input.haul]} • ${LABELS.flightClass[input.flightClass]} • ${distLabel} • ${p} passenger(s)`;
+  function renderLandResult(r) {
+    resultsEl.innerHTML = `
+      <p><strong>${r.label}</strong></p>
+      <div class="kpi">
+        <div class="kpiBox">
+          <div class="label">Per passenger</div>
+          <div class="value">${r.perPassengerKg} kg CO₂</div>
+        </div>
+        <div class="kpiBox">
+          <div class="label">Total</div>
+          <div class="value">${r.totalKg} kg CO₂</div>
+        </div>
+        <div class="kpiBox">
+          <div class="label">Distance used</div>
+          <div class="value">${r.km} km</div>
+        </div>
+      </div>
+    `;
   }
 
-  function renderOutput(input, out) {
-    if (input.mode === "land") {
-      const unitLabel = UNIT_LABELS[out.factorUnit] || out.factorUnit;
-      const factorLine = `Factor used: <strong>${out.factor}</strong> kgCO₂e per <strong>${unitLabel}</strong>`;
-
-      const notes = out.isCar
-        ? `<li>Car factors are per <strong>vehicle-km</strong>. Per-passenger is estimated by dividing by passenger count.</li>
-           <li>This assumes one shared car for the group.</li>`
-        : `<li>${input.landMode} factors are per <strong>passenger-km</strong>. Group totals multiply by passenger count.</li>`;
-
-      showResult(`
-        <p><strong>Distance:</strong> ${CarbonCalc.format(out.distanceKm)} km</p>
-        <p>${factorLine}</p>
-        <p><strong>Total emissions:</strong> ${CarbonCalc.format(out.totalKg)} kgCO₂e</p>
-        <p><strong>Per passenger:</strong> ${CarbonCalc.format(out.perPassengerKg)} kgCO₂e</p>
-        <ul class="muted small">${notes}</ul>
-      `);
-      return;
-    }
-
-    showResult(`
-      <p><strong>Distance:</strong> ${CarbonCalc.format(out.distanceKm)} km</p>
-      <p><strong>Factors used (kgCO₂e per passenger-km):</strong></p>
-      <ul class="muted">
-        <li>With RF: <strong>${out.factorWithRF}</strong></li>
-        <li>Without RF: <strong>${out.factorWithoutRF}</strong></li>
-      </ul>
-      <p><strong>Total emissions (group):</strong></p>
-      <ul>
-        <li>With RF: <strong>${CarbonCalc.format(out.totalWithRFKg)} kgCO₂e</strong></li>
-        <li>Without RF: <strong>${CarbonCalc.format(out.totalWithoutRFKg)} kgCO₂e</strong></li>
-      </ul>
-      <p class="muted small">
-        RF (radiative forcing) reflects non-CO₂ impacts. This MVP shows both totals.
-        The comparison table uses the <strong>With RF</strong> total.
-      </p>
-    `);
+  function renderAirResult(r) {
+    resultsEl.innerHTML = `
+      <p><strong>${r.label}</strong></p>
+      <p class="muted tiny">RF = Radiative Forcing (shown with and without).</p>
+      <div class="kpi">
+        <div class="kpiBox">
+          <div class="label">Per passenger (with RF)</div>
+          <div class="value">${r.perPassengerWithRF} kg CO₂</div>
+        </div>
+        <div class="kpiBox">
+          <div class="label">Per passenger (without RF)</div>
+          <div class="value">${r.perPassengerWithoutRF} kg CO₂</div>
+        </div>
+        <div class="kpiBox">
+          <div class="label">Total (with RF)</div>
+          <div class="value">${r.totalWithRF} kg CO₂</div>
+        </div>
+        <div class="kpiBox">
+          <div class="label">Total (without RF)</div>
+          <div class="value">${r.totalWithoutRF} kg CO₂</div>
+        </div>
+      </div>
+      <p class="tiny muted">Distance used: ${r.km} km</p>
+    `;
   }
 
-  function rebuildCompareTable() {
-    compareTableBody.innerHTML = "";
-
-    if (state.compare.length === 0) {
-      compareTableBody.innerHTML = `<tr><td colspan="4" class="muted">No trips added yet.</td></tr>`;
-      return;
-    }
-
-    state.compare.forEach((row, idx) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${idx + 1}</td>
-        <td>${row.label}</td>
-        <td><strong>${CarbonCalc.format(row.totalKg)} kgCO₂e</strong></td>
-        <td><button class="btn btn-ghost" type="button" data-remove="${idx}">Remove</button></td>
-      `;
-      compareTableBody.appendChild(tr);
-    });
-
-    compareTableBody.querySelectorAll("[data-remove]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const i = Number(btn.getAttribute("data-remove"));
-        state.compare.splice(i, 1);
-        rebuildCompareTable();
-      });
-    });
+  function clearComparison() {
+    comparisonBody.innerHTML = "";
   }
 
-  function calculateAndRender() {
+  function addRow(label, perPassengerKg, totalKg) {
+    const tr = document.createElement("tr");
+
+    const td1 = document.createElement("td");
+    td1.textContent = label;
+
+    const td2 = document.createElement("td");
+    td2.textContent = perPassengerKg;
+
+    const td3 = document.createElement("td");
+    td3.textContent = totalKg;
+
+    tr.appendChild(td1);
+    tr.appendChild(td2);
+    tr.appendChild(td3);
+    comparisonBody.appendChild(tr);
+  }
+
+  function renderLandComparison(baseInputs) {
+    clearComparison();
+
+    const km = CarbonCalc.toKm(baseInputs.distance, baseInputs.unit);
+
+    // Pick a small set of common comparisons (simple + explainable)
+    const options = [
+      { landMode: "car", option: "petrol" },
+      { landMode: "bus", option: "local_bus" },
+      { landMode: "rail", option: "national_rail" },
+      { landMode: "taxi", option: "average_taxi" }
+    ];
+
+    for (let i = 0; i < options.length; i++) {
+      const opt = options[i];
+
+      const out = CarbonCalc.calculateLand(
+        {
+          mode: "land",
+          landMode: opt.landMode,
+          option: opt.option,
+          distance: baseInputs.distance,
+          unit: baseInputs.unit,
+          passengers: baseInputs.passengers
+        },
+        CarbonFactors
+      );
+
+      if (out.ok) {
+        addRow(out.label, `${out.perPassengerKg} kg`, `${out.totalKg} kg`);
+      }
+    }
+
+    factorNote.textContent = `Factors: ${CarbonFactors.meta.year} (${CarbonFactors.meta.note}) — Distance used: ${CarbonCalc.round2(km)} km`;
+  }
+
+  function renderAirComparison(baseInputs) {
+    clearComparison();
+
+    const haul = haulEl.value;
+    const km = CarbonCalc.toKm(baseInputs.distance, baseInputs.unit);
+
+    const classes = ["economy", "premium_economy", "business", "first"];
+
+    for (let i = 0; i < classes.length; i++) {
+      const flightClass = classes[i];
+
+      const out = CarbonCalc.calculateAir(
+        {
+          mode: "air",
+          haul: haul,
+          flightClass: flightClass,
+          distance: baseInputs.distance,
+          unit: baseInputs.unit,
+          passengers: baseInputs.passengers
+        },
+        CarbonFactors
+      );
+
+      if (out.ok) {
+        // Show with RF in comparison table (and explain in README)
+        addRow(out.label, `${out.perPassengerWithRF} kg (with RF)`, `${out.totalWithRF} kg (with RF)`);
+      }
+    }
+
+    factorNote.textContent = `Factors: ${CarbonFactors.meta.year} (${CarbonFactors.meta.note}) — Distance used: ${CarbonCalc.round2(km)} km`;
+  }
+
+  // Events
+  modeEl.addEventListener("change", function () {
+    showModeControls();
     setError("");
-    hideResult();
-    addToCompareBtn.disabled = true;
+    clearComparison();
+  });
 
-    const inputs = getInputs();
-    if (!inputs.ok) {
-      setError(inputs.message);
-      return;
-    }
+  landModeEl.addEventListener("change", function () {
+    showLandModeOptions();
+    setError("");
+  });
 
-    try {
-      const out = CarbonCalc.calculate(inputs.input, factors);
-      state.lastCalc = { input: inputs.input, out };
-      renderOutput(inputs.input, out);
-      addToCompareBtn.disabled = false;
-    } catch (e) {
-      console.error(e);
-      setError("Something went wrong while calculating. Please try again.");
-    }
-  }
+  clearBtn.addEventListener("click", function () {
+    distanceEl.value = "";
+    passengersEl.value = "";
+    setError("");
+    resultsEl.innerHTML = `<p class="muted">Enter values and press Calculate.</p>`;
+    clearComparison();
+  });
 
-  // Event wiring
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", function (e) {
     e.preventDefault();
-    calculateAndRender();
-  });
-
-  mode.addEventListener("change", () => {
-    toggleModePanels();
     setError("");
-    hideResult();
-    addToCompareBtn.disabled = true;
+
+    const built = buildInputs();
+    if (!built.ok) {
+      setError(built.error);
+      return;
+    }
+
+    const out = CarbonCalc.calculate(built.inputs, CarbonFactors);
+    if (!out.ok) {
+      setError(out.error);
+      return;
+    }
+
+    if (built.inputs.mode === "air") {
+      renderAirResult(out);
+      renderAirComparison(built.inputs);
+    } else {
+      renderLandResult(out);
+      renderLandComparison(built.inputs);
+    }
   });
 
-  haul.addEventListener("change", () => {
-    populateFlightClasses();
-    setError("");
-    hideResult();
-    addToCompareBtn.disabled = true;
-  });
-
-  [passengers, distance, unit, landMode, carType, taxiType, busType, railType, flightClass].forEach((el) => {
-    el.addEventListener("change", () => {
-      setError("");
-      hideResult();
-      addToCompareBtn.disabled = true;
-    });
-  });
-
-  addToCompareBtn.addEventListener("click", () => {
-    if (!state.lastCalc) return;
-
-    const label = makeTripLabel(state.lastCalc.input, state.lastCalc.out);
-    const totalKg =
-      state.lastCalc.input.mode === "air" ? state.lastCalc.out.totalWithRFKg : state.lastCalc.out.totalKg;
-
-    state.compare.push({ label, totalKg });
-    rebuildCompareTable();
-  });
-
-  clearCompareBtn.addEventListener("click", () => {
-    state.compare = [];
-    rebuildCompareTable();
-  });
-
-  // Init
-  populateLandSelects();
-  populateFlightClasses();
-  toggleModePanels();
-  rebuildCompareTable();
-})();
+  // init
+  showModeControls();
+  showLandModeOptions();
+});
