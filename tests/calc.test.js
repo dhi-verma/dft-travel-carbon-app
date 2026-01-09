@@ -1,5 +1,5 @@
-const CarbonCalc = require("./calc.js");
-const CarbonFactors = require("./factors.js");
+const CarbonCalc = require("../calc.js");
+const CarbonFactors = require("../factors.js");
 
 test("toKm converts miles to km", () => {
   expect(CarbonCalc.toKm(10, "mi")).toBeCloseTo(16.0934, 4);
