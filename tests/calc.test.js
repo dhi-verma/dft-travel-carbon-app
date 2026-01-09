@@ -1,6 +1,7 @@
 // calc.test.js - Simple tests for carbon calculator
 
-const CarbonCalc = require('./calc.js');
+const CarbonCalc = require('../src/calc.js');
+const CarbonFactors = require('../src/factors.js');
 
 describe('Carbon Calculator Tests', () => {
   
