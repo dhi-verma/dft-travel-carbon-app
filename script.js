@@ -75,6 +75,11 @@
     },
   };
 
+  const UNIT_LABELS = {
+    "vehicle.km": "vehicle-km",
+    "passenger.km": "passenger-km",
+  };
+
   function setError(msg) {
     errorBox.textContent = msg || "";
     errorBox.hidden = !msg;
@@ -198,7 +203,9 @@
 
   function renderOutput(input, out) {
     if (input.mode === "land") {
-      const factorLine = `Factor used: <strong>${out.factor}</strong> kgCO₂e per <strong>${out.factorUnit}</strong>`;
+      const unitLabel = UNIT_LABELS[out.factorUnit] || out.factorUnit;
+      const factorLine = `Factor used: <strong>${out.factor}</strong> kgCO₂e per <strong>${unitLabel}</strong>`;
+
       const notes = out.isCar
         ? `<li>Car factors are per <strong>vehicle-km</strong>. Per-passenger is estimated by dividing by passenger count.</li>
            <li>This assumes one shared car for the group.</li>`
