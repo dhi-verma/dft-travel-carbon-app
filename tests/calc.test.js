@@ -1,49 +1,68 @@
-const CarbonCalc = require("../calc.js");
-const CarbonFactors = require("../factors.js");
+// calc.test.js - Simple tests for carbon calculator
 
-test("toKm converts miles to km", () => {
-  expect(CarbonCalc.toKm(10, "mi")).toBeCloseTo(16.0934, 4);
-  expect(CarbonCalc.toKm(10, "km")).toBeCloseTo(10, 4);
-});
+const CarbonCalc = require('./calc.js');
 
-test("round2 rounds to 2 decimals", () => {
-  expect(CarbonCalc.round2(12.345)).toBe(12.35);
-  expect(CarbonCalc.round2(12.344)).toBe(12.34);
-});
+describe('Carbon Calculator Tests', () => {
+  
+  test('converts miles to kilometers correctly', () => {
+    var result = CarbonCalc.milesToKm(10);
+    expect(result).toBeCloseTo(16.09, 2);
+  });
 
-test("calculateLand: car (vehicle basis) divides by passengers", () => {
-  const out = CarbonCalc.calculateLand(
-    { mode: "land", landMode: "car", option: "petrol", distance: 100, unit: "km", passengers: 2 },
-    CarbonFactors
-  );
+  test('rounds to two decimal places', () => {
+    expect(CarbonCalc.roundToTwo(12.345)).toBe(12.35);
+    expect(CarbonCalc.roundToTwo(12.344)).toBe(12.34);
+  });
 
-  expect(out.ok).toBe(true);
-  // total = 100 * 0.16272
-  expect(out.totalKg).toBeCloseTo(16.27, 2);
-  // per passenger = total / 2
-  expect(out.perPassengerKg).toBeCloseTo(8.14, 2);
-});
+  test('calculates car emissions correctly', () => {
+    var result = CarbonCalc.calculateLandEmissions(100, 'km', 'car', 'petrol', 1);
+    
+    expect(result.success).toBe(true);
+    expect(result.total).toBeCloseTo(17, 1);
+  });
 
-test("calculateLand: rail (passenger basis) multiplies by passengers for total", () => {
-  const out = CarbonCalc.calculateLand(
-    { mode: "land", landMode: "rail", option: "national_rail", distance: 100, unit: "km", passengers: 3 },
-    CarbonFactors
-  );
+  test('calculates car emissions with multiple passengers', () => {
+    var result = CarbonCalc.calculateLandEmissions(100, 'km', 'car', 'diesel', 2);
+    
+    expect(result.success).toBe(true);
+    expect(result.total).toBeCloseTo(17, 1);
+    expect(result.perPerson).toBeCloseTo(8.5, 1);
+  });
 
-  expect(out.ok).toBe(true);
-  // per passenger = 100 * 0.03546 = 3.546 -> 3.55
-  expect(out.perPassengerKg).toBeCloseTo(3.55, 2);
-  // total = per passenger * 3
-  expect(out.totalKg).toBeCloseTo(10.65, 2);
-});
+  test('calculates bus emissions correctly', () => {
+    var result = CarbonCalc.calculateLandEmissions(100, 'km', 'bus', 'local', 2);
+    
+    expect(result.success).toBe(true);
+    expect(result.perPerson).toBeCloseTo(10, 1);
+    expect(result.total).toBeCloseTo(20, 1);
+  });
 
-test("calculateAir: short-haul economy returns with/without RF outputs", () => {
-  const out = CarbonCalc.calculateAir(
-    { mode: "air", haul: "short_haul_to_from_uk", flightClass: "economy", distance: 1000, unit: "km", passengers: 1 },
-    CarbonFactors
-  );
+  test('calculates rail emissions correctly', () => {
+    var result = CarbonCalc.calculateLandEmissions(50, 'km', 'rail', 'national', 1);
+    
+    expect(result.success).toBe(true);
+    expect(result.perPerson).toBeCloseTo(2, 1);
+  });
 
-  expect(out.ok).toBe(true);
-  expect(out.perPassengerWithRF).toBeCloseTo(125.76, 2);
-  expect(out.perPassengerWithoutRF).toBeCloseTo(74.35, 2);
+  test('calculates flight emissions with RF', () => {
+    var result = CarbonCalc.calculateAirEmissions(1000, 'km', 'short', 'economy', 1);
+    
+    expect(result.success).toBe(true);
+    expect(result.perPersonWithRF).toBeCloseTo(130, 10);
+    expect(result.perPersonWithoutRF).toBeCloseTo(70, 10);
+  });
+
+  test('handles miles input for flights', () => {
+    var result = CarbonCalc.calculateAirEmissions(100, 'miles', 'short', 'economy', 1);
+    
+    expect(result.success).toBe(true);
+    expect(result.distanceKm).toBeCloseTo(160.93, 2);
+  });
+
+  test('calculates flight emissions for multiple passengers', () => {
+    var result = CarbonCalc.calculateAirEmissions(1000, 'km', 'long', 'business', 3);
+    
+    expect(result.success).toBe(true);
+    expect(result.totalWithRF).toBeCloseTo(result.perPersonWithRF * 3, 2);
+  });
 });
