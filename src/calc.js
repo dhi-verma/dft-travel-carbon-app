@@ -1,136 +1,153 @@
-function round2(n) {
-  return Math.round(n * 100) / 100;
+// calc.js - Calculation functions for carbon emissions
+
+// Emission factors (kg CO2 per km)
+// Data simplified from UK Government conversion factors for student project
+const EMISSION_FACTORS = {
+  land: {
+    car: {
+      petrol: { factor: 0.17, basis: 'vehicle', label: 'Car (Petrol)' },
+      diesel: { factor: 0.17, basis: 'vehicle', label: 'Car (Diesel)' },
+      ev: { factor: 0.06, basis: 'vehicle', label: 'Car (Electric)' }
+    },
+    bus: {
+      local: { factor: 0.10, basis: 'passenger', label: 'Local Bus' },
+      coach: { factor: 0.03, basis: 'passenger', label: 'Coach' }
+    },
+    rail: {
+      national: { factor: 0.04, basis: 'passenger', label: 'National Rail' },
+      metro: { factor: 0.03, basis: 'passenger', label: 'Metro/Tram' }
+    },
+    taxi: {
+      regular: { factor: 0.18, basis: 'vehicle', label: 'Taxi' }
+    }
+  },
+  air: {
+    short: {
+      economy: { withRF: 0.13, withoutRF: 0.07, label: 'Short-haul Economy' },
+      premium: { withRF: 0.15, withoutRF: 0.09, label: 'Short-haul Premium' },
+      business: { withRF: 0.20, withoutRF: 0.12, label: 'Short-haul Business' },
+      first: { withRF: 0.23, withoutRF: 0.14, label: 'Short-haul First' }
+    },
+    medium: {
+      economy: { withRF: 0.15, withoutRF: 0.09, label: 'Medium-haul Economy' },
+      premium: { withRF: 0.18, withoutRF: 0.11, label: 'Medium-haul Premium' },
+      business: { withRF: 0.24, withoutRF: 0.15, label: 'Medium-haul Business' },
+      first: { withRF: 0.27, withoutRF: 0.16, label: 'Medium-haul First' }
+    },
+    long: {
+      economy: { withRF: 0.17, withoutRF: 0.10, label: 'Long-haul Economy' },
+      premium: { withRF: 0.21, withoutRF: 0.13, label: 'Long-haul Premium' },
+      business: { withRF: 0.29, withoutRF: 0.18, label: 'Long-haul Business' },
+      first: { withRF: 0.33, withoutRF: 0.20, label: 'Long-haul First' }
+    }
+  }
+};
+
+// Simple rounding function (like temperature converter formative)
+function roundToTwo(num) {
+  return Math.round(num * 100) / 100;
 }
 
-function toKm(distance, unit) {
-  if (unit === "mi") return distance * 1.60934;
-  return distance; // km
+// Convert miles to kilometers
+function milesToKm(miles) {
+  return miles * 1.60934;
 }
 
-function parsePositiveNumber(raw, fieldName) {
-  if (raw === "") {
-    return { value: null, error: `Enter a number for ${fieldName}.` };
+// Calculate land-based travel emissions
+function calculateLandEmissions(distance, unit, landType, option, passengers) {
+  // Convert to km if needed
+  var distanceKm = distance;
+  if (unit === 'miles') {
+    distanceKm = milesToKm(distance);
   }
 
-  const n = Number(raw);
-
-  if (isNaN(n)) {
-    return { value: null, error: `Enter a number for ${fieldName}.` };
+  // Get the emission factor
+  var factorData = EMISSION_FACTORS.land[landType][option];
+  if (!factorData) {
+    return { error: 'Invalid land type or option selected' };
   }
 
-  if (n <= 0) {
-    return { value: null, error: `${fieldName} must be greater than 0.` };
-  }
+  var factor = factorData.factor;
+  var basis = factorData.basis;
+  var label = factorData.label;
 
-  return { value: n, error: "" };
-}
+  var totalEmissions;
+  var perPersonEmissions;
 
-function parsePassengers(raw) {
-  // If empty, assume 1 passenger (simple default for MVP)
-  if (raw === "") return { value: 1, error: "" };
-
-  const n = Number(raw);
-
-  if (isNaN(n) || !Number.isInteger(n)) {
-    return { value: null, error: "Passengers must be a whole number." };
-  }
-
-  if (n < 1) return { value: null, error: "Passengers must be at least 1." };
-  if (n > 9) return { value: null, error: "Passengers must be 9 or fewer (demo limit)." };
-
-  return { value: n, error: "" };
-}
-
-function landFactor(factors, landMode, option) {
-  if (!factors || !factors.land) return null;
-  const modeObj = factors.land[landMode];
-  if (!modeObj) return null;
-  return modeObj[option] || null;
-}
-
-function calculateLand(inputs, factors) {
-  const f = landFactor(factors, inputs.landMode, inputs.option);
-  if (!f) return { ok: false, error: "Could not find a factor for the selected land option." };
-
-  const km = toKm(inputs.distance, inputs.unit);
-
-  let totalKg;
-  let perPassengerKg;
-
-  if (f.basis === "vehicle") {
-    totalKg = f.kgPerKm * km;
-    perPassengerKg = totalKg / inputs.passengers;
+  // Calculate based on vehicle or passenger basis
+  if (basis === 'vehicle') {
+    // For cars/taxis: factor is per vehicle
+    totalEmissions = factor * distanceKm;
+    perPersonEmissions = totalEmissions / passengers;
   } else {
-    perPassengerKg = f.kgPerKm * km;
-    totalKg = perPassengerKg * inputs.passengers;
+    // For bus/rail: factor is per passenger
+    perPersonEmissions = factor * distanceKm;
+    totalEmissions = perPersonEmissions * passengers;
   }
 
   return {
-    ok: true,
-    label: f.label,
-    km: round2(km),
-    perPassengerKg: round2(perPassengerKg),
-    totalKg: round2(totalKg)
+    success: true,
+    label: label,
+    distanceKm: roundToTwo(distanceKm),
+    perPerson: roundToTwo(perPersonEmissions),
+    total: roundToTwo(totalEmissions),
+    basis: basis
   };
 }
 
-function airFactor(factors, haul, flightClass) {
-  if (!factors || !factors.air) return null;
-  const haulObj = factors.air[haul];
-  if (!haulObj) return null;
-  return haulObj[flightClass] || null;
-}
+// Calculate air travel emissions
+function calculateAirEmissions(distance, unit, haul, flightClass, passengers) {
+  // Convert to km if needed
+  var distanceKm = distance;
+  if (unit === 'miles') {
+    distanceKm = milesToKm(distance);
+  }
 
-function calculateAir(inputs, factors) {
-  const f = airFactor(factors, inputs.haul, inputs.flightClass);
-  if (!f) return { ok: false, error: "Could not find a factor for the selected flight option." };
+  // Get the emission factor
+  var factorData = EMISSION_FACTORS.air[haul][flightClass];
+  if (!factorData) {
+    return { error: 'Invalid flight type or class selected' };
+  }
 
-  const km = toKm(inputs.distance, inputs.unit);
+  var label = factorData.label;
+  var factorWithRF = factorData.withRF;
+  var factorWithoutRF = factorData.withoutRF;
 
-  const perWithRF = f.withRF * km;
-  const perWithoutRF = f.withoutRF * km;
+  // Calculate per person
+  var perPersonWithRF = factorWithRF * distanceKm;
+  var perPersonWithoutRF = factorWithoutRF * distanceKm;
 
-  const totalWithRF = perWithRF * inputs.passengers;
-  const totalWithoutRF = perWithoutRF * inputs.passengers;
+  // Calculate total
+  var totalWithRF = perPersonWithRF * passengers;
+  var totalWithoutRF = perPersonWithoutRF * passengers;
 
   return {
-    ok: true,
-    label: f.label,
-    km: round2(km),
-    perPassengerWithRF: round2(perWithRF),
-    perPassengerWithoutRF: round2(perWithoutRF),
-    totalWithRF: round2(totalWithRF),
-    totalWithoutRF: round2(totalWithoutRF)
+    success: true,
+    label: label,
+    distanceKm: roundToTwo(distanceKm),
+    perPersonWithRF: roundToTwo(perPersonWithRF),
+    perPersonWithoutRF: roundToTwo(perPersonWithoutRF),
+    totalWithRF: roundToTwo(totalWithRF),
+    totalWithoutRF: roundToTwo(totalWithoutRF)
   };
 }
 
-function calculate(inputs, factors) {
-  if (inputs.mode === "air") return calculateAir(inputs, factors);
-  return calculateLand(inputs, factors);
-}
+// Make available globally for browser
+window.CarbonCalc = {
+  EMISSION_FACTORS: EMISSION_FACTORS,
+  calculateLandEmissions: calculateLandEmissions,
+  calculateAirEmissions: calculateAirEmissions,
+  roundToTwo: roundToTwo,
+  milesToKm: milesToKm
+};
 
-// Export for browser (guarded so Jest/Node doesn't crash)
-if (typeof window !== "undefined") {
-  window.CarbonCalc = {
-    round2,
-    toKm,
-    parsePositiveNumber,
-    parsePassengers,
-    calculateLand,
-    calculateAir,
-    calculate
-  };
-}
-
-// Export for Jest/Node
-if (typeof module !== "undefined") {
+// Export for testing (Node/Jest)
+if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    round2,
-    toKm,
-    parsePositiveNumber,
-    parsePassengers,
-    calculateLand,
-    calculateAir,
-    calculate
+    EMISSION_FACTORS: EMISSION_FACTORS,
+    calculateLandEmissions: calculateLandEmissions,
+    calculateAirEmissions: calculateAirEmissions,
+    roundToTwo: roundToTwo,
+    milesToKm: milesToKm
   };
 }
