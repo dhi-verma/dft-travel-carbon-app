@@ -1,132 +1,139 @@
-(function (root, factory) {
-  if (typeof module === "object" && module.exports) {
-    module.exports = factory();
+/* calc.js
+   Pure calculation helpers so we can unit test the logic easily.
+*/
+
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+function toKm(distance, unit) {
+  if (unit === "mi") return distance * 1.60934;
+  return distance; // km
+}
+
+function parsePositiveNumber(raw, fieldName) {
+  // Keep validation simple and readable (student-level)
+  if (raw === "") {
+    return { value: null, error: `Enter a number for ${fieldName}.` };
+  }
+
+  const n = Number(raw);
+  if (isNaN(n)) {
+    return { value: null, error: `Enter a number for ${fieldName}.` };
+  }
+
+  if (n <= 0) {
+    return { value: null, error: `${fieldName} must be greater than 0.` };
+  }
+
+  return { value: n, error: "" };
+}
+
+function parsePassengers(raw) {
+  if (raw === "") return { value: 1, error: "" }; // default to 1 if empty
+  const n = Number(raw);
+
+  if (isNaN(n) || !Number.isInteger(n)) {
+    return { value: null, error: "Passengers must be a whole number." };
+  }
+
+  if (n < 1) return { value: null, error: "Passengers must be at least 1." };
+  if (n > 9) return { value: null, error: "Passengers must be 9 or fewer (demo limit)." };
+
+  return { value: n, error: "" };
+}
+
+function landFactor(factors, landMode, option) {
+  const modeObj = factors.land[landMode];
+  if (!modeObj) return null;
+  return modeObj[option] || null;
+}
+
+function calculateLand(inputs, factors) {
+  const f = landFactor(factors, inputs.landMode, inputs.option);
+  if (!f) {
+    return { ok: false, error: "Could not find a factor for the selected land option." };
+  }
+
+  const km = toKm(inputs.distance, inputs.unit);
+
+  let totalKg;
+  let perPassengerKg;
+
+  if (f.basis === "vehicle") {
+    totalKg = f.kgPerKm * km;
+    perPassengerKg = totalKg / inputs.passengers;
   } else {
-    root.CarbonCalc = factory();
-  }
-})(typeof self !== "undefined" ? self : this, function () {
-  "use strict";
-
-  function round(n, dp) {
-    const m = Math.pow(10, dp);
-    return Math.round((n + Number.EPSILON) * m) / m;
-  }
-
-  function toKm(distance, unit) {
-    if (unit === "km") return distance;
-    return distance * 1.60934;
-  }
-
-  function validateDistance(distance) {
-    if (distance === null || distance === undefined || Number.isNaN(distance)) {
-      return { ok: false, message: "Enter a number for distance." };
-    }
-    if (!Number.isFinite(distance)) return { ok: false, message: "Distance must be a finite number." };
-    if (distance <= 0) return { ok: false, message: "Distance must be greater than 0." };
-    if (distance > 100000) return { ok: false, message: "Distance is unrealistically large. Please double-check." };
-    return { ok: true, message: "" };
-  }
-
-  function validatePassengers(passengers) {
-    if (passengers === null || passengers === undefined || Number.isNaN(passengers)) {
-      return { ok: false, message: "Enter a number for passengers." };
-    }
-    if (!Number.isFinite(passengers)) return { ok: false, message: "Passengers must be a finite number." };
-    if (!Number.isInteger(passengers)) return { ok: false, message: "Passengers must be a whole number." };
-    if (passengers < 1) return { ok: false, message: "Passengers must be at least 1." };
-    if (passengers > 1000) return { ok: false, message: "Passengers is unrealistically large. Please double-check." };
-    return { ok: true, message: "" };
-  }
-
-  function format(n) {
-    return Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
-  }
-
-  function landFactor(factors, landMode, optionKey) {
-    if (landMode === "car") return factors.land.car[optionKey];
-    if (landMode === "taxi") return factors.land.taxis[optionKey];
-    if (landMode === "bus") return factors.land.bus[optionKey];
-    if (landMode === "rail") return factors.land.rail[optionKey];
-    throw new Error("Unknown land mode.");
-  }
-
-  function calculateLand(input, factors) {
-    const distanceKm = toKm(input.distance, input.unit);
-    const pax = input.passengers;
-
-    const factorRec = landFactor(factors, input.landMode, input.option);
-    const factor = factorRec.kgco2e_per_unit;
-    const factorUnit = factorRec.unit;
-
-    const isCar = input.landMode === "car";
-
-    let totalKg;
-    let perPassengerKg;
-
-    if (isCar) {
-      totalKg = distanceKm * factor;
-      perPassengerKg = totalKg / pax;
-    } else {
-      perPassengerKg = distanceKm * factor;
-      totalKg = perPassengerKg * pax;
-    }
-
-    return {
-      distanceKm: round(distanceKm, 2),
-      factor: round(factor, 5),
-      factorUnit,
-      isCar,
-      totalKg: round(totalKg, 2),
-      perPassengerKg: round(perPassengerKg, 2),
-    };
-  }
-
-  function flightFactor(factors, haul, flightClass) {
-    const rec = factors.air[haul];
-    if (!rec) throw new Error("Unknown haul.");
-    const cls = rec[flightClass];
-    if (!cls) throw new Error("Unknown flight class for selected haul.");
-    return cls;
-  }
-
-  function calculateAir(input, factors) {
-    const distanceKm = toKm(input.distance, input.unit);
-    const pax = input.passengers;
-
-    const rec = flightFactor(factors, input.haul, input.flightClass);
-
-    const factorWithRF = rec.with_rf;
-    const factorWithoutRF = rec.without_rf;
-
-    const perPassengerWithRF = distanceKm * factorWithRF;
-    const perPassengerWithoutRF = distanceKm * factorWithoutRF;
-
-    const totalWithRFKg = perPassengerWithRF * pax;
-    const totalWithoutRFKg = perPassengerWithoutRF * pax;
-
-    return {
-      distanceKm: round(distanceKm, 2),
-      factorWithRF: round(factorWithRF, 5),
-      factorWithoutRF: round(factorWithoutRF, 5),
-      perPassengerWithRF: round(perPassengerWithRF, 2),
-      perPassengerWithoutRF: round(perPassengerWithoutRF, 2),
-      totalWithRFKg: round(totalWithRFKg, 2),
-      totalWithoutRFKg: round(totalWithoutRFKg, 2),
-    };
-  }
-
-  function calculate(input, factors) {
-    if (input.mode === "land") return calculateLand(input, factors);
-    if (input.mode === "air") return calculateAir(input, factors);
-    throw new Error("Unknown mode.");
+    // passenger basis
+    perPassengerKg = f.kgPerKm * km;
+    totalKg = perPassengerKg * inputs.passengers;
   }
 
   return {
-    round,
-    toKm,
-    validateDistance,
-    validatePassengers,
-    calculate,
-    format,
+    ok: true,
+    label: f.label,
+    km: round2(km),
+    perPassengerKg: round2(perPassengerKg),
+    totalKg: round2(totalKg)
   };
-});
+}
+
+function airFactor(factors, haul, flightClass) {
+  const haulObj = factors.air[haul];
+  if (!haulObj) return null;
+  return haulObj[flightClass] || null;
+}
+
+function calculateAir(inputs, factors) {
+  const f = airFactor(factors, inputs.haul, inputs.flightClass);
+  if (!f) {
+    return { ok: false, error: "Could not find a factor for the selected flight option." };
+  }
+
+  const km = toKm(inputs.distance, inputs.unit);
+
+  const perWithRF = f.withRF * km;
+  const perWithoutRF = f.withoutRF * km;
+
+  const totalWithRF = perWithRF * inputs.passengers;
+  const totalWithoutRF = perWithoutRF * inputs.passengers;
+
+  return {
+    ok: true,
+    label: f.label,
+    km: round2(km),
+    perPassengerWithRF: round2(perWithRF),
+    perPassengerWithoutRF: round2(perWithoutRF),
+    totalWithRF: round2(totalWithRF),
+    totalWithoutRF: round2(totalWithoutRF)
+  };
+}
+
+function calculate(inputs, factors) {
+  if (inputs.mode === "air") return calculateAir(inputs, factors);
+  return calculateLand(inputs, factors);
+}
+
+// Browser access
+window.CarbonCalc = {
+  round2,
+  toKm,
+  parsePositiveNumber,
+  parsePassengers,
+  calculateLand,
+  calculateAir,
+  calculate
+};
+
+// Jest/Node access
+if (typeof module !== "undefined") {
+  module.exports = {
+    round2,
+    toKm,
+    parsePositiveNumber,
+    parsePassengers,
+    calculateLand,
+    calculateAir,
+    calculate
+  };
+}
