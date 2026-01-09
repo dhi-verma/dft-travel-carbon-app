@@ -10,9 +10,10 @@
 
 <body>
   <header class="container">
-    <h1>DfT Travel Carbon Calculator</h1>
+    <h1>DfT Travel Carbon QuickCalc</h1>
     <p class="subtitle">
-      Estimate travel emissions (kgCO₂e) for common business travel modes using UK Government conversion factors (2025).
+      Quick travel emissions estimates (kgCO₂e) for common business travel modes.
+      (Coursework MVP — not an official DfT tool.)
     </p>
   </header>
 
@@ -141,20 +142,17 @@
         </table>
       </div>
     </section>
-
   </main>
+
+  <footer class="container footer">
+    <p class="muted small">Built for NCHNAP688 Software Engineering AE1.</p>
+  </footer>
 
   <script src="src/factors.js"></script>
   <script src="src/calc.js"></script>
   <script src="script.js"></script>
 
   <script>
-    // metadata box
-    try {
-      document.getElementById("metaBox").textContent =
-        JSON.stringify(window.CarbonFactors?.meta ?? {}, null, 2);
-    } catch (e) {}
-
     // toggle the correct option dropdown for land mode
     (function () {
       const landMode = document.getElementById("landMode");
