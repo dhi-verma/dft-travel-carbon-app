@@ -133,13 +133,15 @@ function calculateAirEmissions(distance, unit, haul, flightClass, passengers) {
 }
 
 // Make available globally for browser
-window.CarbonCalc = {
-  EMISSION_FACTORS: EMISSION_FACTORS,
-  calculateLandEmissions: calculateLandEmissions,
-  calculateAirEmissions: calculateAirEmissions,
-  roundToTwo: roundToTwo,
-  milesToKm: milesToKm
-};
+if (typeof window !== 'undefined') {
+  window.CarbonCalc = {
+    EMISSION_FACTORS: EMISSION_FACTORS,
+    calculateLandEmissions: calculateLandEmissions,
+    calculateAirEmissions: calculateAirEmissions,
+    roundToTwo: roundToTwo,
+    milesToKm: milesToKm
+  };
+}
 
 // Export for testing (Node/Jest)
 if (typeof module !== 'undefined' && module.exports) {
