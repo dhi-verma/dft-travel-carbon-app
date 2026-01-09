@@ -1,115 +1,114 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>DfT Travel Carbon Calculator (Student Project)</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Travel Carbon Calculator</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-  <main class="container">
-    <header class="header">
-      <h1>Travel Carbon Calculator</h1>
-      <p class="subtitle">A small student-built web app (vanilla HTML/CSS/JS) to estimate CO₂ emissions for land and air travel.</p>
+  <div class="container">
+    <header>
+      <h1>DfT Travel Carbon Calculator</h1>
+      <p class="subtitle">Calculate CO2 emissions for business travel (Student project)</p>
     </header>
 
-    <section class="card">
+    <div class="card">
       <h2>Calculator</h2>
-
-      <form id="calcForm" novalidate>
-        <div class="grid">
-          <div class="field">
-            <label for="mode">Mode</label>
-            <select id="mode" name="mode">
-              <option value="land" selected>Land</option>
-              <option value="air">Air</option>
+      
+      <form id="calcForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mode">Travel Mode</label>
+            <select id="mode">
+              <option value="land">Land (Car/Bus/Rail)</option>
+              <option value="air">Air (Flight)</option>
             </select>
           </div>
 
-          <div class="field">
+          <div class="form-group">
             <label for="distance">Distance</label>
-            <input id="distance" name="distance" inputmode="decimal" placeholder="e.g. 120" />
+            <input type="number" id="distance" placeholder="e.g. 100" step="0.1" min="0.1">
           </div>
 
-          <div class="field">
+          <div class="form-group">
             <label for="unit">Unit</label>
-            <select id="unit" name="unit">
-              <option value="km" selected>km</option>
-              <option value="mi">miles</option>
+            <select id="unit">
+              <option value="km">Kilometers</option>
+              <option value="miles">Miles</option>
             </select>
           </div>
 
-          <div class="field">
+          <div class="form-group">
             <label for="passengers">Passengers</label>
-            <input id="passengers" name="passengers" inputmode="numeric" placeholder="e.g. 1" />
+            <input type="number" id="passengers" value="1" min="1" max="10">
           </div>
         </div>
 
-        <!-- Land controls -->
-        <div id="landControls" class="section">
-          <div class="grid">
-            <div class="field">
-              <label for="landMode">Land type</label>
-              <select id="landMode" name="landMode">
-                <option value="car" selected>Car</option>
+        <!-- Land options -->
+        <div id="landOptions" class="options-section">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="landType">Land Type</label>
+              <select id="landType">
+                <option value="car">Car</option>
                 <option value="bus">Bus</option>
                 <option value="rail">Rail</option>
                 <option value="taxi">Taxi</option>
               </select>
             </div>
 
-            <div class="field" id="carOptionsWrap">
-              <label for="carOption">Car option</label>
-              <select id="carOption" name="carOption">
-                <option value="petrol" selected>Petrol</option>
+            <div class="form-group" id="carOptionGroup">
+              <label for="carOption">Car Type</label>
+              <select id="carOption">
+                <option value="petrol">Petrol</option>
                 <option value="diesel">Diesel</option>
-                <option value="ev">Electric (EV)</option>
+                <option value="ev">Electric</option>
               </select>
             </div>
 
-            <div class="field hidden" id="busOptionsWrap">
-              <label for="busOption">Bus option</label>
-              <select id="busOption" name="busOption">
-                <option value="local_bus" selected>Local bus</option>
+            <div class="form-group hidden" id="busOptionGroup">
+              <label for="busOption">Bus Type</label>
+              <select id="busOption">
+                <option value="local">Local Bus</option>
                 <option value="coach">Coach</option>
               </select>
             </div>
 
-            <div class="field hidden" id="railOptionsWrap">
-              <label for="railOption">Rail option</label>
-              <select id="railOption" name="railOption">
-                <option value="national_rail" selected>National Rail</option>
-                <option value="tram_metro">Tram / Metro</option>
+            <div class="form-group hidden" id="railOptionGroup">
+              <label for="railOption">Rail Type</label>
+              <select id="railOption">
+                <option value="national">National Rail</option>
+                <option value="metro">Metro/Tram</option>
               </select>
             </div>
 
-            <div class="field hidden" id="taxiOptionsWrap">
-              <label for="taxiOption">Taxi option</label>
-              <select id="taxiOption" name="taxiOption">
-                <option value="average_taxi" selected>Average taxi</option>
+            <div class="form-group hidden" id="taxiOptionGroup">
+              <label for="taxiOption">Taxi Type</label>
+              <select id="taxiOption">
+                <option value="regular">Regular Taxi</option>
               </select>
             </div>
           </div>
         </div>
 
-        <!-- Air controls -->
-        <div id="airControls" class="section hidden">
-          <div class="grid">
-            <div class="field">
-              <label for="haul">Flight type</label>
-              <select id="haul" name="haul">
-                <option value="short_haul_to_from_uk" selected>Short-haul (to/from UK)</option>
-                <option value="medium_haul">Medium-haul</option>
-                <option value="long_haul">Long-haul</option>
+        <!-- Air options -->
+        <div id="airOptions" class="options-section hidden">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="haul">Flight Distance</label>
+              <select id="haul">
+                <option value="short">Short-haul</option>
+                <option value="medium">Medium-haul</option>
+                <option value="long">Long-haul</option>
               </select>
             </div>
 
-            <div class="field">
+            <div class="form-group">
               <label for="flightClass">Class</label>
-              <select id="flightClass" name="flightClass">
-                <option value="economy" selected>Economy</option>
-                <option value="premium_economy">Premium economy</option>
+              <select id="flightClass">
+                <option value="economy">Economy</option>
+                <option value="premium">Premium Economy</option>
                 <option value="business">Business</option>
                 <option value="first">First</option>
               </select>
@@ -117,49 +116,47 @@
           </div>
         </div>
 
-        <div class="actions">
-          <button type="submit" class="btn">Calculate</button>
+        <div class="button-group">
+          <button type="submit" class="btn primary">Calculate</button>
           <button type="button" id="clearBtn" class="btn secondary">Clear</button>
         </div>
 
-        <p id="error" class="error" role="alert" aria-live="polite"></p>
+        <div id="error" class="error-message"></div>
       </form>
-    </section>
+    </div>
 
-    <section class="card">
+    <div class="card">
       <h2>Results</h2>
       <div id="results" class="results">
-        <p class="muted">Enter values and press Calculate.</p>
+        <p class="placeholder">Enter values above and click Calculate</p>
       </div>
-    </section>
+    </div>
 
-    <section class="card">
+    <div class="card">
       <h2>Comparison</h2>
-      <p class="muted">Compares common options for the same distance and passengers.</p>
-
-      <div class="tableWrap">
-        <table class="table" aria-label="Comparison table">
+      <p class="info-text">Compare different travel options for the same distance</p>
+      <div id="comparison" class="comparison-table">
+        <table>
           <thead>
             <tr>
               <th>Option</th>
-              <th>Per passenger (kg CO₂)</th>
-              <th>Total (kg CO₂)</th>
+              <th>Per Person (kg CO2)</th>
+              <th>Total (kg CO2)</th>
             </tr>
           </thead>
-          <tbody id="comparisonBody"></tbody>
+          <tbody id="comparisonBody">
+            <tr><td colspan="3" class="placeholder">Results will appear here</td></tr>
+          </tbody>
         </table>
       </div>
+    </div>
 
-      <p class="tiny muted" id="factorNote"></p>
-    </section>
-
-    <footer class="footer">
-      <p class="tiny muted">Student project: factors are simplified for coursework demonstration.</p>
+    <footer>
+      <p class="footer-text">Student Project - Simplified emission factors for demonstration</p>
     </footer>
-  </main>
+  </div>
 
-  <script src="factors.js" defer></script>
-  <script src="calc.js" defer></script>
-  <script src="script.js" defer></script>
+  <script src="calc.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
