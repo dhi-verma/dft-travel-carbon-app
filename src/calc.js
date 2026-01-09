@@ -1,7 +1,3 @@
-/* calc.js
-   Pure calculation helpers so we can unit test the logic easily.
-*/
-
 function round2(n) {
   return Math.round(n * 100) / 100;
 }
@@ -12,12 +8,12 @@ function toKm(distance, unit) {
 }
 
 function parsePositiveNumber(raw, fieldName) {
-  // Keep validation simple and readable (student-level)
   if (raw === "") {
     return { value: null, error: `Enter a number for ${fieldName}.` };
   }
 
   const n = Number(raw);
+
   if (isNaN(n)) {
     return { value: null, error: `Enter a number for ${fieldName}.` };
   }
@@ -30,7 +26,9 @@ function parsePositiveNumber(raw, fieldName) {
 }
 
 function parsePassengers(raw) {
-  if (raw === "") return { value: 1, error: "" }; // default to 1 if empty
+  // If empty, assume 1 passenger (simple default for MVP)
+  if (raw === "") return { value: 1, error: "" };
+
   const n = Number(raw);
 
   if (isNaN(n) || !Number.isInteger(n)) {
@@ -44,6 +42,7 @@ function parsePassengers(raw) {
 }
 
 function landFactor(factors, landMode, option) {
+  if (!factors || !factors.land) return null;
   const modeObj = factors.land[landMode];
   if (!modeObj) return null;
   return modeObj[option] || null;
@@ -51,9 +50,7 @@ function landFactor(factors, landMode, option) {
 
 function calculateLand(inputs, factors) {
   const f = landFactor(factors, inputs.landMode, inputs.option);
-  if (!f) {
-    return { ok: false, error: "Could not find a factor for the selected land option." };
-  }
+  if (!f) return { ok: false, error: "Could not find a factor for the selected land option." };
 
   const km = toKm(inputs.distance, inputs.unit);
 
@@ -64,7 +61,6 @@ function calculateLand(inputs, factors) {
     totalKg = f.kgPerKm * km;
     perPassengerKg = totalKg / inputs.passengers;
   } else {
-    // passenger basis
     perPassengerKg = f.kgPerKm * km;
     totalKg = perPassengerKg * inputs.passengers;
   }
@@ -79,6 +75,7 @@ function calculateLand(inputs, factors) {
 }
 
 function airFactor(factors, haul, flightClass) {
+  if (!factors || !factors.air) return null;
   const haulObj = factors.air[haul];
   if (!haulObj) return null;
   return haulObj[flightClass] || null;
@@ -86,9 +83,7 @@ function airFactor(factors, haul, flightClass) {
 
 function calculateAir(inputs, factors) {
   const f = airFactor(factors, inputs.haul, inputs.flightClass);
-  if (!f) {
-    return { ok: false, error: "Could not find a factor for the selected flight option." };
-  }
+  if (!f) return { ok: false, error: "Could not find a factor for the selected flight option." };
 
   const km = toKm(inputs.distance, inputs.unit);
 
@@ -114,18 +109,20 @@ function calculate(inputs, factors) {
   return calculateLand(inputs, factors);
 }
 
-// Browser access
-window.CarbonCalc = {
-  round2,
-  toKm,
-  parsePositiveNumber,
-  parsePassengers,
-  calculateLand,
-  calculateAir,
-  calculate
-};
+// Export for browser (guarded so Jest/Node doesn't crash)
+if (typeof window !== "undefined") {
+  window.CarbonCalc = {
+    round2,
+    toKm,
+    parsePositiveNumber,
+    parsePassengers,
+    calculateLand,
+    calculateAir,
+    calculate
+  };
+}
 
-// Jest/Node access
+// Export for Jest/Node
 if (typeof module !== "undefined") {
   module.exports = {
     round2,
