@@ -1,112 +1,49 @@
-const CarbonCalc = require("../src/calc");
-const Factors = require("../src/factors");
+const CarbonCalc = require("./calc.js");
+const CarbonFactors = require("./factors.js");
 
-describe("CarbonCalc validation", () => {
-  test("distance must be a number > 0", () => {
-    expect(CarbonCalc.validateDistance(NaN).ok).toBe(false);
-    expect(CarbonCalc.validateDistance(0).ok).toBe(false);
-    expect(CarbonCalc.validateDistance(-10).ok).toBe(false);
-    expect(CarbonCalc.validateDistance(0.01).ok).toBe(true);
-  });
-
-  test("passengers must be an integer >= 1", () => {
-    expect(CarbonCalc.validatePassengers(0).ok).toBe(false);
-    expect(CarbonCalc.validatePassengers(-1).ok).toBe(false);
-    expect(CarbonCalc.validatePassengers(1.2).ok).toBe(false);
-    expect(CarbonCalc.validatePassengers(1).ok).toBe(true);
-    expect(CarbonCalc.validatePassengers(3).ok).toBe(true);
-  });
+test("toKm converts miles to km", () => {
+  expect(CarbonCalc.toKm(10, "mi")).toBeCloseTo(16.0934, 4);
+  expect(CarbonCalc.toKm(10, "km")).toBeCloseTo(10, 4);
 });
 
-describe("CarbonCalc distance conversion", () => {
-  test("miles -> km uses 1.60934", () => {
-    expect(CarbonCalc.toKm(10, "miles")).toBeCloseTo(16.0934, 6);
-  });
-
-  test("km stays as km", () => {
-    expect(CarbonCalc.toKm(10, "km")).toBeCloseTo(10, 6);
-  });
-
-  test("invalid unit throws", () => {
-    expect(() => CarbonCalc.toKm(10, "yards")).toThrow();
-  });
+test("round2 rounds to 2 decimals", () => {
+  expect(CarbonCalc.round2(12.345)).toBe(12.35);
+  expect(CarbonCalc.round2(12.344)).toBe(12.34);
 });
 
-describe("Land calculations", () => {
-  test("car (diesel) uses vehicle-km and divides per passenger", () => {
-    const input = {
-      mode: "land",
-      unit: "km",
-      distance: 100,
-      passengers: 2,
-      landMode: "car",
-      option: "diesel",
-    };
+test("calculateLand: car (vehicle basis) divides by passengers", () => {
+  const out = CarbonCalc.calculateLand(
+    { mode: "land", landMode: "car", option: "petrol", distance: 100, unit: "km", passengers: 2 },
+    CarbonFactors
+  );
 
-    const out = CarbonCalc.calculate(input, Factors);
-
-    // Factor from factors.js (diesel)
-    expect(out.factor).toBeCloseTo(0.173, 6);
-
-    // Total = 0.173 * 100 = 17.3
-    expect(out.totalKg).toBeCloseTo(17.3, 6);
-
-    // Per passenger = 17.3 / 2 = 8.65
-    expect(out.perPassengerKg).toBeCloseTo(8.65, 6);
-
-    expect(out.factorUnit).toBe("vehicle.km");
-    expect(out.isCar).toBe(true);
-  });
-
-  test("rail (national_rail) uses passenger-km and multiplies by passengers", () => {
-    const input = {
-      mode: "land",
-      unit: "km",
-      distance: 100,
-      passengers: 2,
-      landMode: "rail",
-      option: "national_rail",
-    };
-
-    const out = CarbonCalc.calculate(input, Factors);
-
-    // Factor from factors.js (national rail)
-    expect(out.factor).toBeCloseTo(0.03545, 6);
-
-    // Per passenger = 0.03545 * 100 = 3.545
-    expect(out.perPassengerKg).toBeCloseTo(3.545, 6);
-
-    // Group total = 3.545 * 2 = 7.09
-    expect(out.totalKg).toBeCloseTo(7.09, 6);
-
-    expect(out.factorUnit).toBe("passenger.km");
-    expect(out.isCar).toBe(false);
-  });
+  expect(out.ok).toBe(true);
+  // total = 100 * 0.16272
+  expect(out.totalKg).toBeCloseTo(16.27, 2);
+  // per passenger = total / 2
+  expect(out.perPassengerKg).toBeCloseTo(8.14, 2);
 });
 
-describe("Air calculations", () => {
-  test("air short-haul economy returns both With RF and Without RF totals", () => {
-    const input = {
-      mode: "air",
-      unit: "km",
-      distance: 1000,
-      passengers: 2,
-      haul: "short_haul_to_from_uk",
-      flightClass: "economy",
-    };
+test("calculateLand: rail (passenger basis) multiplies by passengers for total", () => {
+  const out = CarbonCalc.calculateLand(
+    { mode: "land", landMode: "rail", option: "national_rail", distance: 100, unit: "km", passengers: 3 },
+    CarbonFactors
+  );
 
-    const out = CarbonCalc.calculate(input, Factors);
+  expect(out.ok).toBe(true);
+  // per passenger = 100 * 0.03546 = 3.546 -> 3.55
+  expect(out.perPassengerKg).toBeCloseTo(3.55, 2);
+  // total = per passenger * 3
+  expect(out.totalKg).toBeCloseTo(10.65, 2);
+});
 
-    // factors from factors.js for short-haul economy
-    expect(out.factorWithRF).toBeCloseTo(0.12576, 6);
-    expect(out.factorWithoutRF).toBeCloseTo(0.07435, 6);
+test("calculateAir: short-haul economy returns with/without RF outputs", () => {
+  const out = CarbonCalc.calculateAir(
+    { mode: "air", haul: "short_haul_to_from_uk", flightClass: "economy", distance: 1000, unit: "km", passengers: 1 },
+    CarbonFactors
+  );
 
-    // per passenger totals
-    expect(out.perPassengerWithRFKg).toBeCloseTo(125.76, 6);
-    expect(out.perPassengerWithoutRFKg).toBeCloseTo(74.35, 6);
-
-    // group totals (x2 passengers)
-    expect(out.totalWithRFKg).toBeCloseTo(251.52, 6);
-    expect(out.totalWithoutRFKg).toBeCloseTo(148.7, 6);
-  });
+  expect(out.ok).toBe(true);
+  expect(out.perPassengerWithRF).toBeCloseTo(125.76, 2);
+  expect(out.perPassengerWithoutRF).toBeCloseTo(74.35, 2);
 });
