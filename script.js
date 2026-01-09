@@ -2,13 +2,17 @@
 // UI wiring: read inputs, validate, call calc.js, render results + comparison table.
 
 function init() {
-  // Quick sanity checks (helps debugging)
-  if (!window.CarbonCalc) {
-    console.error("CarbonCalc missing. Check that calc.js is loading and the path is correct.");
-    return;
-  }
-  if (!window.CarbonFactors) {
-    console.error("CarbonFactors missing. Check that factors.js is loading and the path is correct.");
+  const CarbonCalc = window.CarbonCalc;
+  const CarbonFactors = window.CarbonFactors;
+
+  // If calc/factors didn't load, show a visible error (not just console)
+  const errorEl = document.getElementById("error");
+  if (!CarbonCalc || !CarbonFactors) {
+    if (errorEl) {
+      errorEl.textContent =
+        "App failed to load calculation files. Check script paths (factors.js and calc.js).";
+    }
+    console.error("Missing CarbonCalc or CarbonFactors. Check script loading order/paths.");
     return;
   }
 
@@ -37,22 +41,51 @@ function init() {
   const form = document.getElementById("calcForm");
   const clearBtn = document.getElementById("clearBtn");
 
-  const errorEl = document.getElementById("error");
   const resultsEl = document.getElementById("results");
   const comparisonBody = document.getElementById("comparisonBody");
   const factorNote = document.getElementById("factorNote");
 
   // If any required element is missing, fail loudly (better than “button does nothing”)
-  const required = { modeEl, distanceEl, unitEl, passengersEl, landControls, airControls, landModeEl, form, clearBtn, errorEl, resultsEl, comparisonBody, factorNote, haulEl, flightClassEl };
+  const required = {
+    modeEl,
+    distanceEl,
+    unitEl,
+    passengersEl,
+    landControls,
+    airControls,
+    landModeEl,
+    form,
+    clearBtn,
+    errorEl,
+    resultsEl,
+    comparisonBody,
+    factorNote,
+    haulEl,
+    flightClassEl,
+    carOptionEl,
+    busOptionEl,
+    railOptionEl,
+    taxiOptionEl,
+    carWrap,
+    busWrap,
+    railWrap,
+    taxiWrap
+  };
+
   for (const [name, el] of Object.entries(required)) {
     if (!el) {
-      console.error(`Missing element: ${name}. Check your index.html IDs match script.js.`);
+      console.error(`Missing element: ${name}. Check index.html IDs match script.js.`);
+      if (errorEl) errorEl.textContent = "Page error: missing a required form element (check IDs).";
       return;
     }
   }
 
   function setError(msg) {
     errorEl.textContent = msg || "";
+  }
+
+  function clearComparison() {
+    comparisonBody.innerHTML = "";
   }
 
   function showLandModeOptions() {
@@ -155,10 +188,6 @@ function init() {
     `;
   }
 
-  function clearComparison() {
-    comparisonBody.innerHTML = "";
-  }
-
   function addRow(label, perPassenger, total) {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${label}</td><td>${perPassenger}</td><td>${total}</td>`;
@@ -167,6 +196,7 @@ function init() {
 
   function renderLandComparison(baseInputs) {
     clearComparison();
+
     const options = [
       { landMode: "car", option: "petrol" },
       { landMode: "bus", option: "local_bus" },
@@ -188,6 +218,7 @@ function init() {
 
   function renderAirComparison(baseInputs) {
     clearComparison();
+
     const classes = ["economy", "premium_economy", "business", "first"];
 
     for (const c of classes) {
@@ -203,26 +234,27 @@ function init() {
   }
 
   // Events
-  modeEl.addEventListener("change", () => {
+  modeEl.addEventListener("change", function () {
     showModeControls();
     setError("");
     clearComparison();
   });
 
-  landModeEl.addEventListener("change", () => {
+  landModeEl.addEventListener("change", function () {
     showLandModeOptions();
     setError("");
   });
 
-  clearBtn.addEventListener("click", () => {
+  clearBtn.addEventListener("click", function () {
     distanceEl.value = "";
     passengersEl.value = "";
     setError("");
     resultsEl.innerHTML = `<p class="muted">Enter values and press Calculate.</p>`;
     clearComparison();
+    factorNote.textContent = "";
   });
 
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", function (e) {
     e.preventDefault();
     setError("");
 
@@ -241,14 +273,14 @@ function init() {
     }
   });
 
-  // init UI
+  // Initial UI state
   showModeControls();
   showLandModeOptions();
 
   console.log("Init OK: handlers attached.");
 }
 
-// Run init reliably (even if DOMContentLoaded already fired)
+// Run init reliably
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init);
 } else {
