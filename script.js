@@ -1,7 +1,17 @@
 // script.js
 // UI wiring: read inputs, validate, call calc.js, render results + comparison table.
 
-document.addEventListener("DOMContentLoaded", function () {
+function init() {
+  // Quick sanity checks (helps debugging)
+  if (!window.CarbonCalc) {
+    console.error("CarbonCalc missing. Check that calc.js is loading and the path is correct.");
+    return;
+  }
+  if (!window.CarbonFactors) {
+    console.error("CarbonFactors missing. Check that factors.js is loading and the path is correct.");
+    return;
+  }
+
   const modeEl = document.getElementById("mode");
   const distanceEl = document.getElementById("distance");
   const unitEl = document.getElementById("unit");
@@ -31,6 +41,15 @@ document.addEventListener("DOMContentLoaded", function () {
   const resultsEl = document.getElementById("results");
   const comparisonBody = document.getElementById("comparisonBody");
   const factorNote = document.getElementById("factorNote");
+
+  // If any required element is missing, fail loudly (better than “button does nothing”)
+  const required = { modeEl, distanceEl, unitEl, passengersEl, landControls, airControls, landModeEl, form, clearBtn, errorEl, resultsEl, comparisonBody, factorNote, haulEl, flightClassEl };
+  for (const [name, el] of Object.entries(required)) {
+    if (!el) {
+      console.error(`Missing element: ${name}. Check your index.html IDs match script.js.`);
+      return;
+    }
+  }
 
   function setError(msg) {
     errorEl.textContent = msg || "";
@@ -83,25 +102,11 @@ document.addEventListener("DOMContentLoaded", function () {
     };
 
     if (base.mode === "air") {
-      return {
-        ok: true,
-        inputs: {
-          ...base,
-          haul: haulEl.value,
-          flightClass: flightClassEl.value
-        }
-      };
+      return { ok: true, inputs: { ...base, haul: haulEl.value, flightClass: flightClassEl.value } };
     }
 
     const land = currentLandOption();
-    return {
-      ok: true,
-      inputs: {
-        ...base,
-        landMode: land.landMode,
-        option: land.option
-      }
-    };
+    return { ok: true, inputs: { ...base, landMode: land.landMode, option: land.option } };
   }
 
   function renderLandResult(r) {
@@ -154,30 +159,14 @@ document.addEventListener("DOMContentLoaded", function () {
     comparisonBody.innerHTML = "";
   }
 
-  function addRow(label, perPassengerKg, totalKg) {
+  function addRow(label, perPassenger, total) {
     const tr = document.createElement("tr");
-
-    const td1 = document.createElement("td");
-    td1.textContent = label;
-
-    const td2 = document.createElement("td");
-    td2.textContent = perPassengerKg;
-
-    const td3 = document.createElement("td");
-    td3.textContent = totalKg;
-
-    tr.appendChild(td1);
-    tr.appendChild(td2);
-    tr.appendChild(td3);
+    tr.innerHTML = `<td>${label}</td><td>${perPassenger}</td><td>${total}</td>`;
     comparisonBody.appendChild(tr);
   }
 
   function renderLandComparison(baseInputs) {
     clearComparison();
-
-    const km = CarbonCalc.toKm(baseInputs.distance, baseInputs.unit);
-
-    // Pick a small set of common comparisons (simple + explainable)
     const options = [
       { landMode: "car", option: "petrol" },
       { landMode: "bus", option: "local_bus" },
@@ -185,74 +174,47 @@ document.addEventListener("DOMContentLoaded", function () {
       { landMode: "taxi", option: "average_taxi" }
     ];
 
-    for (let i = 0; i < options.length; i++) {
-      const opt = options[i];
-
+    for (const opt of options) {
       const out = CarbonCalc.calculateLand(
-        {
-          mode: "land",
-          landMode: opt.landMode,
-          option: opt.option,
-          distance: baseInputs.distance,
-          unit: baseInputs.unit,
-          passengers: baseInputs.passengers
-        },
+        { mode: "land", ...opt, distance: baseInputs.distance, unit: baseInputs.unit, passengers: baseInputs.passengers },
         CarbonFactors
       );
-
-      if (out.ok) {
-        addRow(out.label, `${out.perPassengerKg} kg`, `${out.totalKg} kg`);
-      }
+      if (out.ok) addRow(out.label, `${out.perPassengerKg} kg`, `${out.totalKg} kg`);
     }
 
-    factorNote.textContent = `Factors: ${CarbonFactors.meta.year} (${CarbonFactors.meta.note}) — Distance used: ${CarbonCalc.round2(km)} km`;
+    const km = CarbonCalc.toKm(baseInputs.distance, baseInputs.unit);
+    factorNote.textContent = `Factors: ${CarbonFactors.meta.year} — Distance used: ${CarbonCalc.round2(km)} km`;
   }
 
   function renderAirComparison(baseInputs) {
     clearComparison();
-
-    const haul = haulEl.value;
-    const km = CarbonCalc.toKm(baseInputs.distance, baseInputs.unit);
-
     const classes = ["economy", "premium_economy", "business", "first"];
 
-    for (let i = 0; i < classes.length; i++) {
-      const flightClass = classes[i];
-
+    for (const c of classes) {
       const out = CarbonCalc.calculateAir(
-        {
-          mode: "air",
-          haul: haul,
-          flightClass: flightClass,
-          distance: baseInputs.distance,
-          unit: baseInputs.unit,
-          passengers: baseInputs.passengers
-        },
+        { mode: "air", haul: haulEl.value, flightClass: c, distance: baseInputs.distance, unit: baseInputs.unit, passengers: baseInputs.passengers },
         CarbonFactors
       );
-
-      if (out.ok) {
-        // Show with RF in comparison table (and explain in README)
-        addRow(out.label, `${out.perPassengerWithRF} kg (with RF)`, `${out.totalWithRF} kg (with RF)`);
-      }
+      if (out.ok) addRow(out.label, `${out.perPassengerWithRF} kg (with RF)`, `${out.totalWithRF} kg (with RF)`);
     }
 
-    factorNote.textContent = `Factors: ${CarbonFactors.meta.year} (${CarbonFactors.meta.note}) — Distance used: ${CarbonCalc.round2(km)} km`;
+    const km = CarbonCalc.toKm(baseInputs.distance, baseInputs.unit);
+    factorNote.textContent = `Factors: ${CarbonFactors.meta.year} — Distance used: ${CarbonCalc.round2(km)} km`;
   }
 
   // Events
-  modeEl.addEventListener("change", function () {
+  modeEl.addEventListener("change", () => {
     showModeControls();
     setError("");
     clearComparison();
   });
 
-  landModeEl.addEventListener("change", function () {
+  landModeEl.addEventListener("change", () => {
     showLandModeOptions();
     setError("");
   });
 
-  clearBtn.addEventListener("click", function () {
+  clearBtn.addEventListener("click", () => {
     distanceEl.value = "";
     passengersEl.value = "";
     setError("");
@@ -260,21 +222,15 @@ document.addEventListener("DOMContentLoaded", function () {
     clearComparison();
   });
 
-  form.addEventListener("submit", function (e) {
+  form.addEventListener("submit", (e) => {
     e.preventDefault();
     setError("");
 
     const built = buildInputs();
-    if (!built.ok) {
-      setError(built.error);
-      return;
-    }
+    if (!built.ok) return setError(built.error);
 
     const out = CarbonCalc.calculate(built.inputs, CarbonFactors);
-    if (!out.ok) {
-      setError(out.error);
-      return;
-    }
+    if (!out.ok) return setError(out.error);
 
     if (built.inputs.mode === "air") {
       renderAirResult(out);
@@ -285,7 +241,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // init
+  // init UI
   showModeControls();
   showLandModeOptions();
-});
+
+  console.log("Init OK: handlers attached.");
+}
+
+// Run init reliably (even if DOMContentLoaded already fired)
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
