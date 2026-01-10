@@ -1,162 +1,227 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Travel Carbon Calculator</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>DfT Travel Carbon Calculator</h1>
-      <p class="subtitle">Calculate CO2 emissions for business travel (Student project)</p>
-    </header>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DfT Travel Carbon Calculator (Student Project)</title>
+  <meta name="description" content="A student-built web app to estimate CO₂e emissions for common business travel modes (land and air) using a small subset of UK Government GHG factors." />
 
-    <div class="card">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <h1>DfT Travel Carbon Calculator</h1>
+      <p class="subtitle">Calculate CO₂e emissions for business travel (Student project)</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- CALCULATOR -->
+    <section class="card">
       <h2>Calculator</h2>
-      
-      <form id="calcForm">
-        <div class="form-row">
-          <div class="form-group">
+
+      <!-- Messages -->
+      <div id="error" class="message message-error" style="display:none;"></div>
+      <div id="warning" class="message message-warning" style="display:none;"></div>
+
+      <form id="calcForm" novalidate>
+        <!-- Common inputs -->
+        <div class="grid grid-4">
+          <div class="field">
             <label for="mode">Travel Mode</label>
-            <select id="mode">
-              <option value="land">Land (Car/Bus/Rail)</option>
+            <select id="mode" name="mode">
+              <option value="land" selected>Land (Car/Bus/Rail)</option>
               <option value="air">Air (Flight)</option>
             </select>
           </div>
 
-          <div class="form-group">
+          <div class="field">
             <label for="distance">Distance</label>
-            <input type="number" id="distance" placeholder="e.g. 100" step="0.1" min="0.1">
+            <input id="distance" name="distance" type="number" inputmode="decimal" min="0" step="0.1" value="10" />
           </div>
 
-          <div class="form-group">
+          <div class="field">
             <label for="unit">Unit</label>
-            <select id="unit">
-              <option value="km">Kilometers</option>
+            <select id="unit" name="unit">
+              <option value="km" selected>Kilometres</option>
               <option value="miles">Miles</option>
             </select>
           </div>
 
-          <div class="form-group">
+          <div class="field">
             <label for="passengers">Passengers</label>
-            <input type="number" id="passengers" value="1" min="1" max="10">
+            <input id="passengers" name="passengers" type="number" min="1" step="1" value="1" />
           </div>
         </div>
 
-        <!-- Land options -->
-        <div id="landOptions" class="options-section">
-          <div class="form-row">
-            <div class="form-group">
+        <!-- LAND OPTIONS -->
+        <div id="landOptionsWrap">
+          <div class="divider"></div>
+
+          <div class="grid grid-2">
+            <div class="field">
               <label for="landType">Land Type</label>
-              <select id="landType">
-                <option value="car">Car</option>
+              <select id="landType" name="landType">
+                <option value="car" selected>Car</option>
                 <option value="bus">Bus</option>
                 <option value="rail">Rail</option>
                 <option value="taxi">Taxi</option>
               </select>
             </div>
 
-            <div class="form-group" id="carOptionGroup">
-              <label for="carOption">Car Type</label>
-              <select id="carOption">
-                <option value="petrol">Petrol</option>
+            <!-- Car -->
+            <div id="carTypeWrap" class="field">
+              <label for="carType">Car Type</label>
+              <select id="carType" name="carType">
+                <option value="petrol" selected>Petrol</option>
                 <option value="diesel">Diesel</option>
-                <option value="ev">Electric</option>
+                <option value="ev">Electric (EV)</option>
+                <!-- Optional extras (not shown in UI earlier, but supported in calc.js) -->
+                <option value="hybrid">Hybrid</option>
+                <option value="plug_in_hybrid">Plug-in Hybrid</option>
               </select>
             </div>
 
-            <div class="form-group hidden" id="busOptionGroup">
-              <label for="busOption">Bus Type</label>
-              <select id="busOption">
-                <option value="local">Local Bus</option>
+            <!-- Bus -->
+            <div id="busTypeWrap" class="field" style="display:none;">
+              <label for="busType">Bus Option</label>
+              <select id="busType" name="busType">
+                <option value="local" selected>Local Bus</option>
                 <option value="coach">Coach</option>
+                <!-- Optional -->
+                <option value="london">London Bus</option>
               </select>
             </div>
 
-            <div class="form-group hidden" id="railOptionGroup">
-              <label for="railOption">Rail Type</label>
-              <select id="railOption">
-                <option value="national">National Rail</option>
-                <option value="metro">Metro/Tram</option>
+            <!-- Rail -->
+            <div id="railTypeWrap" class="field" style="display:none;">
+              <label for="railType">Rail Option</label>
+              <select id="railType" name="railType">
+                <option value="national" selected>National Rail</option>
+                <option value="metro">Metro / Tram</option>
+                <!-- Optional -->
+                <option value="international_rail">International Rail</option>
               </select>
             </div>
 
-            <div class="form-group hidden" id="taxiOptionGroup">
-              <label for="taxiOption">Taxi Type</label>
-              <select id="taxiOption">
-                <option value="regular">Regular Taxi</option>
+            <!-- Taxi -->
+            <div id="taxiTypeWrap" class="field" style="display:none;">
+              <label for="taxiType">Taxi Option</label>
+              <select id="taxiType" name="taxiType">
+                <option value="regular" selected>Taxi</option>
+                <!-- Optional -->
+                <option value="black_cab">Black cab</option>
               </select>
             </div>
           </div>
         </div>
 
-        <!-- Air options -->
-        <div id="airOptions" class="options-section hidden">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="haul">Flight Distance</label>
-              <select id="haul">
-                <option value="short">Short-haul</option>
-                <option value="medium">Medium-haul</option>
-                <option value="long">Long-haul</option>
+        <!-- AIR OPTIONS -->
+        <div id="airOptionsWrap" style="display:none;">
+          <div class="divider"></div>
+
+          <div class="grid grid-2">
+            <div class="field">
+              <label for="airHaul">Flight Haul</label>
+              <select id="airHaul" name="airHaul">
+                <option value="short" selected>Short haul</option>
+                <option value="medium">Medium haul</option>
+                <option value="long">Long haul</option>
               </select>
             </div>
 
-            <div class="form-group">
-              <label for="flightClass">Class</label>
-              <select id="flightClass">
-                <option value="economy">Economy</option>
-                <option value="premium">Premium Economy</option>
+            <div class="field">
+              <label for="airClass">Cabin Class</label>
+              <select id="airClass" name="airClass">
+                <option value="economy" selected>Economy</option>
+                <option value="premium">Premium economy</option>
                 <option value="business">Business</option>
                 <option value="first">First</option>
               </select>
             </div>
           </div>
+
+          <p class="hint">
+            Note: flight totals are shown <strong>with Radiative Forcing (RF)</strong> by default, with “no RF” shown underneath for transparency.
+          </p>
         </div>
 
-        <div class="button-group">
-          <button type="submit" class="btn primary">Calculate</button>
-          <button type="button" id="clearBtn" class="btn secondary">Clear</button>
+        <!-- Buttons -->
+        <div class="actions">
+          <button id="calculateBtn" class="btn btn-primary" type="submit">Calculate</button>
+          <button id="clearBtn" class="btn btn-secondary" type="button">Clear</button>
+          <button id="addCompareBtn" class="btn btn-outline" type="button">Add to comparison</button>
         </div>
-
-        <div id="error" class="error-message"></div>
       </form>
-    </div>
+    </section>
 
-    <div class="card">
+    <!-- RESULTS -->
+    <section id="resultsSection" class="card" style="display:none;">
       <h2>Results</h2>
-      <div id="results" class="results">
-        <p class="placeholder">Enter values above and click Calculate</p>
-      </div>
-    </div>
 
-    <div class="card">
-      <h2>Comparison</h2>
-      <p class="info-text">Compare different travel options for the same distance</p>
-      <div id="comparison" class="comparison-table">
-        <table>
+      <h3 id="resultsTitle" class="result-title">—</h3>
+
+      <div class="result-grid">
+        <div class="result-box">
+          <div class="result-label">Distance</div>
+          <div id="outDistance" class="result-value">—</div>
+        </div>
+
+        <div class="result-box">
+          <div class="result-label">Per person</div>
+          <div id="outPerPerson" class="result-value">—</div>
+        </div>
+
+        <div class="result-box">
+          <div class="result-label">Total</div>
+          <div id="outTotal" class="result-value">—</div>
+        </div>
+      </div>
+
+      <p id="outBasis" class="muted">—</p>
+      <p id="outFactor" class="muted">—</p>
+    </section>
+
+    <!-- COMPARISON -->
+    <section class="card">
+      <div class="section-header">
+        <div>
+          <h2>Comparison</h2>
+          <p class="muted">Compare multiple travel options for the same (or similar) distance.</p>
+        </div>
+
+        <button id="clearCompareBtn" class="btn btn-secondary" type="button">Clear</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
           <thead>
             <tr>
-              <th>Option</th>
-              <th>Per Person (kg CO2)</th>
-              <th>Total (kg CO2)</th>
+              <th style="width: 60px;">#</th>
+              <th>Trip</th>
+              <th style="width: 180px;">Emissions</th>
+              <th style="width: 140px;"></th>
             </tr>
           </thead>
-          <tbody id="comparisonBody">
-            <tr><td colspan="3" class="placeholder">Results will appear here</td></tr>
+          <tbody id="compareTableBody">
+            <!-- rows injected by script.js -->
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
 
-    <footer>
-      <p class="footer-text">Student Project - Simplified emission factors for demonstration</p>
+    <!-- FOOTER -->
+    <footer class="footer">
+      <p class="muted">
+        Student Project — simplified factors for demonstration. Not an official DfT tool.
+      </p>
     </footer>
-  </div>
+  </main>
 
+  <!-- IMPORTANT: calc.js MUST load before script.js -->
   <script src="src/calc.js"></script>
-  <script src="./script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
